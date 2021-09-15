@@ -17,7 +17,6 @@ class InCommingWebHooks(WebHooksAPI):
         self.json_data = {
             "channel": ch,
             "username": usr,
-            "icon_emoji": "clock1"
         }
 
     def send_msg(self, msg):
