@@ -1,0 +1,29 @@
+#!/bin/bash
+
+# 1. Check env
+echo "=> check env setting.."
+
+if [ -d './env' ]; then
+    echo "==> env setting is exist!"
+
+else
+    echo "==> env setting is not exist!"
+    echo "==> create python3 virtual env setting"
+
+    python3 -m venv env
+
+fi
+
+echo "=> done"
+
+
+# 2. Check dependency pip list
+echo "=> check dependency python modules"
+source ./env/bin/activate
+
+pip install --upgrade pip
+pip3 install -r ./requirements
+
+deactivate
+
+echo "=> check module done"

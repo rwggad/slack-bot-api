@@ -1,0 +1,42 @@
+[
+	{
+		"type": "header",
+		"text": {
+			"type": "plain_text",
+			"text": ":sparkles:  새로운 공지가 등록되었습니다.  :sparkles:"
+		}
+	},
+	{
+		"type": "context",
+		"elements": [
+			{
+				"text": "*${date}*  |  ${writer}  |  ${target}  ",
+				"type": "mrkdwn"
+			}
+		]
+	},
+	{
+		"type": "divider"
+	},
+	{
+		"type": "section",
+		"text": {
+			"type": "mrkdwn",
+			"text": "${title}"
+		},
+		"accessory": {
+			"type": "button",
+			"text": {
+				"type": "plain_text",
+				"text": "상세 내용 보기",
+				"emoji": true
+			},
+			"value": "click_me_123",
+			"url": "${link}",
+			"action_id": "button-action"
+		}
+	},
+	{
+		"type": "divider"
+	}
+]
