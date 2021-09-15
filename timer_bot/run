@@ -1,6 +1,6 @@
 #!/bin/bash
 
-. ./venv/bin/activate
+. ./env/bin/activate
 
 python3 ./main.py
 
