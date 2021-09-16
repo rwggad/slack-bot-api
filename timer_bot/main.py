@@ -1,12 +1,8 @@
-import time
-
 from datetime import datetime
-from webhook_api import InCommingWebHooks
+from common.webhook_api import InCommingWebHooks
 
 
 INCOMING_URL = ""
-CHANNEL_NAME = ""
-SLACK_BOT_NAME = ""
 
 
 class TimerBot(object):
@@ -105,8 +101,8 @@ def run():
     tb.set_usr_table()
     tb.set_send_msg()
 
-    hook = InCommingWebHooks(INCOMING_URL, CHANNEL_NAME, SLACK_BOT_NAME)
-    hook.send_msg(tb.get_send_msg())
+    hook = InCommingWebHooks(INCOMING_URL)
+    hook.send_msg({'text': tb.get_send_msg()})
 
 
 def main():
@@ -115,3 +111,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
