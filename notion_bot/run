@@ -1,9 +1,9 @@
 #!/bin/bash
 
-source ./env/bin/activate
+SCRIPT_ABS_PATH=$( cd "$(dirname "$0")" ; pwd -P )
 
-python ./src/main.py
+source $SCRIPT_ABS_PATH/env/bin/activate
+
+python $SCRIPT_ABS_PATH/src/main.py
 
 deactivate
-
-

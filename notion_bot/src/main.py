@@ -2,11 +2,16 @@ import os
 import json
 
 from enum import Enum
+from pathlib import Path
 from notion_api import NotionAPI
 from common.webhook_api import (
     SEND_SUCCESS, SEND_FAIL, NO_MSGS, InCommingWebHooks
 )
 
+FILE_PATH = Path(os.path.dirname(__file__))
+PACKAGE_ROOT_PATH = FILE_PATH.parent.absolute()
+RESOURCE_DIR_NAME = 'resource'
+RESOURCE_PATH = '/'.join([str(PACKAGE_ROOT_PATH), RESOURCE_DIR_NAME])
 
 INCOMING_WEBHOOK_API = None
 NOTION_API = None
@@ -62,9 +67,8 @@ class NoticeBot(object):
             'notion_url', 'notion_token', 'incoming_webhook_url'
         ]
 
-        # TODO. 절대 경로 기준으로 변경 필요
         conf_dict = json.load(
-            open(os.path.join('../', 'conf.json'))
+            open(os.path.join(RESOURCE_PATH, 'conf.json'))
         )
 
         # validation check conf.json values
@@ -172,7 +176,7 @@ class NoticeBot(object):
         }
 
         block_dict = json.load(
-            open(os.path.join('../', 'block_fmt.json'))
+            open(os.path.join(RESOURCE_PATH, 'block_fmt.json'))
         )
 
         block_fmt_str = json.dumps(block_dict)
