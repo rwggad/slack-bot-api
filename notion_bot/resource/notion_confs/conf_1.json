@@ -1,0 +1,16 @@
+{
+    "type": "collection_noti",
+    "notion_url": "",
+    "notion_token": "",
+    "incoming_webhook_url": "",
+    "schema": {
+        "trigger": "공지 하기",
+        "fmt_file_name": "block_fmt_1.json",
+        "fmt_variable": {
+            "date": "공지일",
+            "target": "대상",
+            "writer": "작성자",
+            "title": "제목"
+        }
+    }
+}

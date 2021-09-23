@@ -1,6 +1,8 @@
 from typing import Collection
 from notion.client import NotionClient
 from notion.block import *
+from notion.collection import *
+from notion.user import *
 
 
 class NotionAPI(NotionClient):
