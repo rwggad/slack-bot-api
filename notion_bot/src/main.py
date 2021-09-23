@@ -104,7 +104,7 @@ class NoticeBot(object):
         """ 필요시 정의 """
         pass
 
-    def __iter_notice_items(self, items):
+    def __iter_notice_target_item(self, items):
         """ 'collection' block 의 각 칼럼 정보를 가진 값 (@items) 을 입력 받아
             '공지 하기 (@SEND_CHK_BOX_NAME)' 체크박스가 True 인 항목만 찾고
             해당 항목만 iteration 해줍니다.
@@ -123,12 +123,12 @@ class NoticeBot(object):
             @target_list에 저장합니다.
         """
         target_list = []
-        for item in self.__iter_notice_items(self.__notice_all_items):
+        for item in self.__iter_notice_target_item(self.__notice_all_items):
             target_list.append(item)
 
         return target_list
 
-    def __make_block_fmt_slack_msg(self, item):
+    def __make_slack_blocks(self, item):
         """ 'collection' block 의 특정 칼럼 (@item) 에서
             일부 값만 파싱하여, slack block formating 에 맞게 변환 하여 반환 합니다.
 
@@ -189,7 +189,7 @@ class NoticeBot(object):
 
         return new_block_dict
 
-    def __send_to_slack(self, item):
+    def __send_item_to_slack(self, item):
         """
             전송할 특정 칼럼 정보 (@item) 에서, 필요한 값을 추출하여
             slack에 전송할 block 형식의 포맷 생성 및 webhook api를 통해
@@ -201,11 +201,11 @@ class NoticeBot(object):
 
         """
         data = {}
-        data['blocks'] = self.__make_block_fmt_slack_msg(item)
+        data['blocks'] = self.__make_slack_blocks(item)
 
         return self.webhook.send_msg(**data)
 
-    def check(self):
+    def run(self):
         """ 메인 함수로써, 'conf.json' 파일에 입력된 설정 정보를 토대로
             slack 으로 전송이 필요한 항목 파싱 및 메세지 생성 후 특정 채널로 전송 합니다.
 
@@ -219,7 +219,8 @@ class NoticeBot(object):
         """
         target_list = self.__get_target_item_list()
         for target_item in target_list:
-            res = self.__send_to_slack(target_item)  # TODO. 현재 @res 값은 사용하지 않음
+            # TODO. 현재 @res 값은 사용하지 않음
+            res = self.__send_item_to_slack(target_item)
 
             # 'checkbox' 항목 체크 해제 (False)
             self.notion.set_collection_item_property(
@@ -233,7 +234,7 @@ def main():
     try:
         nb = NoticeBot()
         nb.set_notice_page_items()
-        nb.check()
+        nb.run()
 
     except Exception as e:
         print(e)
