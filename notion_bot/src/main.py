@@ -203,6 +203,11 @@ class CollectionPageNotiBot(NotionBot):
             {'${link}': 'https://www.notion.so/{}'.format(page_id)}
         )
 
+        # table 정보에 comment 추가 (TODO. notion page의 comment 값 가져올 수 있도록)
+        json_var_table.update({
+            '${comment}': '해당되는 사업부는 위 공지를 참고하여 업무 숙지 해주시기 바랍니다.'
+        })
+
         # json 포맷 파일을 가져오고, 정의된 variable에 table 정보 추가
         block_dict = json.load(
             open(os.path.join(RESOURCE_PATH, schmea_fmt_f_name))

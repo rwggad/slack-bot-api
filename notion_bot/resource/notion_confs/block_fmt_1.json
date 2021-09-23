@@ -1,16 +1,9 @@
 [
 	{
-		"type": "header",
-		"text": {
-			"type": "plain_text",
-			"text": ":sparkles:  새로운 공지가 등록되었습니다.  :sparkles:"
-		}
-	},
-	{
 		"type": "context",
 		"elements": [
 			{
-				"text": "*${date}*  |  ${writer}  |  ${target}  ",
+				"text": "작성일자: *${date}*  |  대상: *${target}*  | 작성자: *${writer}*",
 				"type": "mrkdwn"
 			}
 		]
@@ -22,7 +15,7 @@
 		"type": "section",
 		"text": {
 			"type": "mrkdwn",
-			"text": "${title}"
+			"text": "*${title}*"
 		},
 		"accessory": {
 			"type": "button",
@@ -35,6 +28,15 @@
 			"url": "${link}",
 			"action_id": "button-action"
 		}
+	},
+	{
+		"type": "context",
+		"elements": [
+			{
+				"type": "mrkdwn",
+				"text": ":pushpin: ${comment}"
+			}
+		]
 	},
 	{
 		"type": "divider"
