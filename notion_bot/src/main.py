@@ -15,12 +15,10 @@ from common.error import (
 from common.webhook_api import (
     SEND_SUCCESS, SEND_FAIL, NO_MSGS, InCommingWebHooks
 )
+from common.constants import NOTION_BOT_RESOURCE_PATH
 
-# TODO. common 으로 옮기기
-FILE_PATH = Path(os.path.dirname(__file__))
-PACKAGE_ROOT_PATH = FILE_PATH.parent.absolute()
-RESOURCE_DIR_NAME = 'resource/notion_confs'
-RESOURCE_PATH = '/'.join([str(PACKAGE_ROOT_PATH), RESOURCE_DIR_NAME])
+
+CONF_DIR = NOTION_BOT_RESOURCE_PATH + '/notion_confs'
 
 
 class NotionBot(object):
@@ -210,7 +208,7 @@ class CollectionPageNotiBot(NotionBot):
 
         # json 포맷 파일을 가져오고, 정의된 variable에 table 정보 추가
         block_dict = json.load(
-            open(os.path.join(RESOURCE_PATH, schmea_fmt_f_name))
+            open(os.path.join(CONF_DIR, schmea_fmt_f_name))
         )
 
         block_fmt_str = json.dumps(block_dict)
@@ -290,7 +288,7 @@ class manager(object):
     @print_execution_func
     def init(self):
         try:
-            f_list = os.listdir(RESOURCE_PATH)
+            f_list = os.listdir(CONF_DIR)
 
             for f_name in f_list:
                 if not f_name.startswith('conf'):
@@ -298,7 +296,7 @@ class manager(object):
 
                 nobj = {}
 
-                nobj['fp'] = open(os.path.join(RESOURCE_PATH, f_name))
+                nobj['fp'] = open(os.path.join(CONF_DIR, f_name))
 
                 conf_dict = json.load(nobj['fp'])
 
