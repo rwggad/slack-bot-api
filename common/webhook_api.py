@@ -1,9 +1,12 @@
 import requests
 
+from common.logger import get_logger
 
 SEND_SUCCESS = 1
 SEND_FAIL = 0
 NO_MSGS = -1
+
+LOGGER = get_logger('webhook')
 
 
 class WebHooksAPI(object):
@@ -32,10 +35,10 @@ class InCommingWebHooks(WebHooksAPI):
 
         try:
             res = self.post(json=self.json_data)
-            print('Success send to slack [response code: {}]'.format(res))
+            LOGGER.info('Success send to slack [response code: {}]'.format(res))
 
         except Exception as e:
-            print('Failed send to slack [msg: {}]'.format(e))
+            LOGGER.error('Failed send to slack [msg: {}]'.format(e))
             return SEND_FAIL
 
         return SEND_SUCCESS

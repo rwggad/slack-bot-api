@@ -2,13 +2,9 @@ import os
 import json
 import time
 
-from pathlib import Path
-from notion_api import (
-    NotionAPI, NotionDate, User
-)
-from common.utils import (
-    print_execution_func
-)
+from notion_api import NotionAPI, NotionDate, User
+from common.utils import print_execution_func
+from common.logger import get_logger
 from common.error import (
     InitError, ConfParseError, SpawnError, GetNotionBlockError
 )
@@ -18,6 +14,7 @@ from common.webhook_api import (
 from common.constants import NOTION_BOT_RESOURCE_PATH
 
 
+LOGGER = get_logger('notion.main')
 CONF_DIR = NOTION_BOT_RESOURCE_PATH + '/notion_confs'
 
 
@@ -283,7 +280,7 @@ class manager(object):
         else:
             raise SpawnError('Invalid page type "{}"'.format(p_type))
 
-        print('- Spawn module: ({})'.format(nobj['mod']))
+        LOGGER.info('- Spawn module: ({})'.format(nobj['mod']))
 
     @print_execution_func
     def init(self):
@@ -315,7 +312,7 @@ class manager(object):
         except Exception as e:
             raise InitError('- Init failed: {}'.format(e))
 
-        print('- Check target count: {}'.format(len(self.__nobjs)))
+        LOGGER.info('- Check target count: {}'.format(len(self.__nobjs)))
 
     @print_execution_func
     def finalize(self):
@@ -355,7 +352,7 @@ def main():
             time.sleep(1)
 
     except Exception as e:
-        print(e)
+        LOGGER.error(e)
 
     finally:
         m.finalize()
