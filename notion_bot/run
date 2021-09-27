@@ -6,4 +6,6 @@ source $SCRIPT_ABS_PATH/env/bin/activate
 
 python $SCRIPT_ABS_PATH/src/main.py $1
 
+tail -f ./slackerr.log
+
 deactivate
