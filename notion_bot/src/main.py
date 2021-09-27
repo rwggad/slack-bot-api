@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import time
+import argparse
 
 from common.utils import print_execution_func
 from common.logger import get_logger
@@ -11,8 +12,10 @@ from notion_slack_bot import CONF_DIR, CollectionPageNotiBot
 
 LOGGER = get_logger('notion.manager')
 
+DAEMON_PID_PATH = '/var/run/slackbot_daemon.pid'
 
-class manager(object):
+
+class Manager(object):
     """ 패키지의 'resource/notion_conf' 디렉토리에 위치한 각각의 conf.json 값을
         파싱 및 @nobjs 리스트에 저장하여 관리 합니다.
     """
@@ -133,82 +136,105 @@ class manager(object):
 
                 res = mod.send_msg_to_slack(text_msg, block_msg)
 
-def run_manager():
-    LOGGER.info('start notion bot manager')
 
-    m = manager()
+class Daemon(object):
+    def __init__(self):
+        self.manager = Manager()
 
-    try:
-        m.init()
+    def __run_manager(self):
+        LOGGER.info('Start manager')
+
+        self.manager.init()
 
         while True:
-            m.check()
+            self.manager.check()
             time.sleep(1)
 
-    except Exception as e:
-        LOGGER.error(e)
+    def run(self):
+        # running check
+        if os.path.isfile(DAEMON_PID_PATH):
+            print('Already running daemon')
+            return
 
-    finally:
-        m.finalize()
+        # run daemon
+        try:
+            pid = os.fork()
+
+            if pid > 0:
+                sys.exit()  # 부모 프로세스 종료
+
+            else:
+                sys.stdout.flush()
+                sys.stderr.flush()
+
+                si = open(os.devnull, 'r')
+                so = open(os.devnull, 'a+')
+                se = open(os.devnull, 'a+')
+
+                os.dup2(si.fileno(), sys.stdin.fileno())
+                os.dup2(so.fileno(), sys.stdout.fileno())
+                os.dup2(se.fileno(), sys.stderr.fileno())
+
+                __daemon_pid = str(os.getpid())
+                with open(DAEMON_PID_PATH, 'w') as f:
+                    f.write(__daemon_pid)
+
+                LOGGER.info('Start daemon (pid:{})'.format(__daemon_pid))
+                self.__run_manager()
 
 
-def start_daemon():
-    LOGGER.info('start notion bot daemon')
+        except Exception as e:
+            raise Exception('Start daemon failed ({})'.format(e))
 
-    try:
-        pid = os.fork()
+        finally:
+            self.manager.finalize()
 
-        if pid > 0:
-            LOGGER.info('Spawn child process: (pid {})'.format(pid))
-            sys.exit()  # 부모 프로세스 종료
+    def stop(self):
+        # running check
+        if not os.path.isfile(DAEMON_PID_PATH):
+            print('Not running daemon')
+            return
 
-    except Exception as e:
-        LOGGER.error('Start daemon failed ({})'.format(e))
-        sys.exit()
+        # stop daemon
+        try:
+            with open(DAEMON_PID_PATH, 'r') as f:
+                __daemon_pid = f.read()
 
-    os.setsid()
-    os.open("/dev/null", os.O_RDWR)
-    os.dup(0)
-    os.dup(0)
+            os.remove(DAEMON_PID_PATH)
+            os.system('kill -9 {}'.format(__daemon_pid))
 
-    run_manager()
+        except Exception as e:
+            raise Exception('Stop daemon failed ({})'.format(e))
+
+        LOGGER.info('Stop daemon')
 
 
-def stop_daemon():
-    LOGGER.info('stop notion bot daemon')
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--start', action='store_true')
+    parser.add_argument('--stop', action='store_true')
 
-    pid = '999999'
-
-    f = open(PID_FILE, 'r')
-
-    for line in f:
-        pid = line = line.strip()
-
-    f.close()
-
-    cmd = 'kill ' + pid
-
-    os.system(cmd)
+    return parser.parse_args()
 
 
 def main():
+    args = parse_args()
+
     try:
-        if len(sys.argv) < 2:
-            print('Invalid argument')
-            return
+        daemon = Daemon()
 
-        if sys.argv[1] == 'start':
-            start_daemon()
+        if args.start:
+            daemon.run()
 
-        elif sys.argv[1] == 'stop':
-            stop_daemon()
+        elif args.stop:
+            daemon.stop()
 
         else:
-            print('Invalid argument')
-            return
+            raise Exception('Invalid arguments')
 
     except Exception as e:
         LOGGER.error(e)
+
 
 if __name__ == '__main__':
     main()

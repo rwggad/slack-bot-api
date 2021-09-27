@@ -1,7 +1,7 @@
 import logging
 
 DEAFULT_LOG_FMT = '%(asctime)s [%(levelname)s] %(name)s: %(message)s'
-DEAFULT_LOG_PATH = './slackerr.log'
+DEAFULT_LOG_PATH = '/var/log/slackerr.log'
 
 
 class Logger2(object):
