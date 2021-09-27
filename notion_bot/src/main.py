@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import time
 
@@ -261,8 +262,8 @@ class manager(object):
         for k, v in conf_dict.items():
             nobj[k] = v
 
-    @print_execution_func
-    def __spawn_nmod(self, conf_dict, nobj):
+    #@print_execution_func
+    def __make_nmod(self, conf_dict, nobj):
         """ conf.json 의 'type' 에 정의된 값에 맞는 Notion Bot Module 인스턴스를 생성
             하며, @nobjs 리스트에 저장 합니다.
 
@@ -280,9 +281,9 @@ class manager(object):
         else:
             raise SpawnError('Invalid page type "{}"'.format(p_type))
 
-        LOGGER.info('- Spawn module: ({})'.format(nobj['mod']))
+        LOGGER.info('- Make notion bot module: ({})'.format(nobj['mod']))
 
-    @print_execution_func
+    #@print_execution_func
     def init(self):
         try:
             f_list = os.listdir(CONF_DIR)
@@ -299,7 +300,7 @@ class manager(object):
 
                 self.__conf_parse(conf_dict, nobj)
 
-                self.__spawn_nmod(conf_dict, nobj)
+                self.__make_nmod(conf_dict, nobj)
 
                 self.__nobjs.append(nobj)
 
@@ -314,7 +315,7 @@ class manager(object):
 
         LOGGER.info('- Check target count: {}'.format(len(self.__nobjs)))
 
-    @print_execution_func
+    #@print_execution_func
     def finalize(self):
         """ @nojbs 에 저장된 각각의 오브젝트에서, file pointer 에 대한 finalize
             처리를 수행합니다.
@@ -323,7 +324,7 @@ class manager(object):
             if nobj.get('fp'):
                 nobj['fp'].close()
 
-    @print_execution_func
+    #@print_execution_func
     def check(self):
         for nobj in self.__nobjs:
             mod = nobj.get('mod')
@@ -340,8 +341,9 @@ class manager(object):
 
                 res = mod.send_msg_to_slack(text_msg, block_msg)
 
+def run_manager():
+    LOGGER.info('start notion bot manager')
 
-def main():
     m = manager()
 
     try:
@@ -356,6 +358,65 @@ def main():
 
     finally:
         m.finalize()
+
+
+def start_daemon():
+    LOGGER.info('start notion bot daemon')
+
+    try:
+        pid = os.fork()
+
+        if pid > 0:
+            LOGGER.info('Spawn child process: (pid {})'.format(pid))
+            sys.exit()  # 부모 프로세스 종료
+
+    except Exception as e:
+        LOGGER.error('Start daemon failed ({})'.format(e))
+        sys.exit()
+
+    os.setsid()
+    os.open("/dev/null", os.O_RDWR)
+    os.dup(0)
+    os.dup(0)
+
+    run_manager()
+
+
+def stop_daemon():
+    LOGGER.info('stop notion bot daemon')
+
+    pid = '999999'
+
+    f = open(PID_FILE, 'r')
+
+    for line in f:
+        pid = line = line.strip()
+
+    f.close()
+
+    cmd = 'kill ' + pid
+
+    os.system(cmd)
+
+
+def main():
+    try:
+        if len(sys.argv) < 2:
+            print('Invalid argument')
+            return
+
+        if sys.argv[1] == 'start':
+            start_daemon()
+
+        elif sys.argv[1] == 'stop':
+            stop_daemon()
+
+        else:
+            print('Invalid argument')
+            return
+
+    except Exception as e:
+        LOGGER.error(e)
 
 if __name__ == '__main__':
     main()
