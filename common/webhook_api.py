@@ -41,6 +41,9 @@ class InCommingWebHooks(WebHooksAPI):
             LOGGER.error('Failed send to slack [msg: {}]'.format(e))
             return SEND_FAIL
 
+        finally:
+            self.json_data = {}
+
         return SEND_SUCCESS
 
 
