@@ -1,21 +1,12 @@
 [
 	{
-		"type": "context",
-		"elements": [
-			{
-				"text": "작성일자: *${date}*  |  대상: *${target}*  | 작성자: *${writer}*",
-				"type": "mrkdwn"
-			}
-		]
-	},
-	{
 		"type": "divider"
 	},
 	{
 		"type": "section",
 		"text": {
 			"type": "mrkdwn",
-			"text": "*${title}*"
+			"text": ":loudspeaker: *${title}*"
 		},
 		"accessory": {
 			"type": "button",
@@ -34,7 +25,16 @@
 		"elements": [
 			{
 				"type": "mrkdwn",
-				"text": ":pushpin: ${comment}"
+				"text": ":exclamation: _${comment}_"
+			}
+		]
+	},
+	{
+		"type": "context",
+		"elements": [
+			{
+				"text": "작성일자: *${date}*  |  대상: *${target}*  | 작성자: *${writer}*",
+				"type": "mrkdwn"
 			}
 		]
 	},
