@@ -102,7 +102,7 @@ def run():
     tb.set_send_msg()
 
     hook = InCommingWebHooks(INCOMING_URL)
-    hook.send_msg({'text': tb.get_send_msg()})
+    hook.send_msg(**{'text': tb.get_send_msg()})
 
 
 def main():

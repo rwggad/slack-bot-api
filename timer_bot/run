@@ -1,7 +1,10 @@
 #!/bin/bash
 
-. ./env/bin/activate
+SCRIPT_ABS_PATH=$( cd "$(dirname "$0")" ; pwd -P )
+PACKAGE_ABS_PATH=${SCRIPT_ABS_PATH%/*}
 
-python3 ./main.py
+export PYTHONPATH=$PYTHONPATH:"$PACKAGE_ABS_PATH"
 
+source $SCRIPT_ABS_PATH/env/bin/activate
+python $SCRIPT_ABS_PATH/main.py
 deactivate
