@@ -1,6 +1,5 @@
 import os
 import sys
-import json
 import time
 import argparse
 
@@ -8,6 +7,7 @@ from common.utils import print_execution_func
 from common.logger import get_logger
 from common.error import InitError, ConfParseError, SpawnError
 
+from resource.config import CONFIG_LIST
 from notion_slack_bot import CONF_DIR, CollectionPageNotiBot
 
 LOGGER = get_logger('notion.manager')
@@ -21,120 +21,140 @@ class Manager(object):
     """
 
     def __init__(self):
-        self.__nobjs = []
+        self.__nobjs = []  # notion object list
 
-    def __conf_parse(self, conf_dict, nobj):
-        """ conf.json 에 저장된 항목을 파싱 및 유효성 검사를 진행하여, @@nobjs 리스트에
-            key / value 형태로 저장 합니다.
+    def __validation_conf(self, conf_dict):
+        """ CONFIG_LIST에 정의된 각각의 설정값에 대한 유효성 검증을 수행 합니다.
         """
-        def validate_check():
-            required_conf_value = [
-                'type',
-                'notion_url',
-                'notion_token',
-                'incoming_webhook_url'
-            ]
+        mandatory_errmsg_fmt ='The essential element is missing ({})'
 
-            # 필수 항목 요소 체크
-            for val in required_conf_value:
-                if val not in conf_dict:
-                    raise ConfParseError('"{}" is mandatory value'.format(val))
+        def validate_webhook_conf(webhook_conf):
+            if not webhook_conf:
+                raise ConfParseError(mandatory_errmsg_fmt.format('webhook'))
 
-            # 'schema' 항목 체크
-            if conf_dict['type'] in ['collection_noti']:
-                if 'schema' not in conf_dict:
-                    raise ConfParseError(
-                        '"Schema item is essential '
-                        'when using the "{}" type.'.format(
-                            conf_dict['type']
-                        )
-                    )
+            required_conf_value = ['incoming_url']
+            for _value in required_conf_value:
+                if webhook_conf.get(_value):
+                    continue
 
-        # 유효성 검사
-        validate_check()
+                path = 'webhook/{}'.format(_value)
+                raise ConfParseError(mandatory_errmsg_fmt.format(path))
 
-        # 유효성 검사 통과시, 각 conf dict 항목 설정
-        for k, v in conf_dict.items():
-            nobj[k] = v
+        def validate_notion_conf(notion_conf):
+            LOGGER.error(notion_conf)
+            if not notion_conf:
+                raise ConfParseError(mandatory_errmsg_fmt('notion'))
 
-    #@print_execution_func
-    def __make_nmod(self, conf_dict, nobj):
-        """ conf.json 의 'type' 에 정의된 값에 맞는 Notion Bot Module 인스턴스를 생성
-            하며, @nobjs 리스트에 저장 합니다.
+            required_conf_value = ['token', 'page_type', 'page_url', 'trigger']
+            for _value in required_conf_value:
+                if notion_conf.get(_value):
+                    continue
 
-            TODO. 현재는 'collection' 타입의 블럭만 지원하고 있음
+                path = 'notion/{}'.format(_value)
+                raise ConfParseError(mandatory_errmsg_fmt.format(path))
+
+        def validate_slack_conf(slack_conf):
+            if not slack_conf:
+                raise ConfParseError(mandatory_errmsg_fmt('slack'))
+
+            required_conf_value = ['send_type']
+            for _value in required_conf_value:
+                if slack_conf.get(_value):
+                    continue
+
+                path = 'slack/{}'.format(_value)
+                raise ConfParseError(mandatory_errmsg_fmt.format(path))
+
+
+            if slack_conf['send_type'] == 'block':
+                if 'block_format' not in slack_conf:
+                    path = 'slack/block_format'
+                    raise ConfParseError(mandatory_errmsg_fmt.format(path))
+
+        validate_webhook_conf(conf_dict.get('webhook'))
+        validate_notion_conf(conf_dict.get('notion'))
+        validate_slack_conf(conf_dict.get('slack'))
+
+        LOGGER.info('- Config valid check OK')
+
+    def __spawn_nmod(self, nobj):
+        """ CONFIG_LIST에 정의된 값의 'page_type' 에 맞은 Notion Bot Module
+            인스턴스를 생성 후, @nobj에 저장합니다. (이 후 @self.nobjs 리스트에 관리 )
         """
-        p_type = conf_dict['type']
+        webhook_conf = nobj['conf_dict']['webhook']
+        notion_conf = nobj['conf_dict']['notion']
 
-        if p_type == 'collection_noti':
-            nobj['mod'] = CollectionPageNotiBot(
-                nobj['incoming_webhook_url'],
-                nobj['notion_token'],
-                nobj['notion_url']
-            )
+        notion_token = notion_conf['token']
+        notion_page_type = notion_conf['page_type']
+        notion_url = notion_conf['page_url']
+
+        webhook_url = webhook_conf['incoming_url']
+
+        if notion_page_type == 'collection':
+            mod = CollectionPageNotiBot(webhook_url, notion_token, notion_url)
 
         else:
-            raise SpawnError('Invalid page type "{}"'.format(p_type))
+            raise SpawnError(
+                'Invalid notion page type "{}"'.format(notion_page_type)
+            )
+
+        nobj['mod'] = mod
 
         LOGGER.info('- Make notion bot module: ({})'.format(nobj['mod']))
 
-    #@print_execution_func
+    def __init_nmod(self, nobj):
+        slack_conf = nobj['conf_dict']['slack']
+        slack_send_type = slack_conf['send_type']
+
+        if slack_send_type == 'block':
+            nobj['mod'].set_schema_table(slack_conf['block_format'])
+
     def init(self):
         try:
-            f_list = os.listdir(CONF_DIR)
+            if not CONFIG_LIST or not isinstance(CONFIG_LIST, list):
+                raise ConfParseError('Missing config list')
 
-            for f_name in f_list:
-                if not f_name.startswith('conf'):
-                    continue
+            for __conf_dict in CONFIG_LIST:
+                self.__validation_conf(__conf_dict)
 
                 nobj = {}
+                nobj['conf_dict'] = __conf_dict
 
-                nobj['fp'] = open(os.path.join(CONF_DIR, f_name))
-
-                conf_dict = json.load(nobj['fp'])
-
-                self.__conf_parse(conf_dict, nobj)
-
-                self.__make_nmod(conf_dict, nobj)
-
+                self.__spawn_nmod(nobj)
+                self.__init_nmod(nobj)
                 self.__nobjs.append(nobj)
 
         except ConfParseError as e:
-            raise InitError('- Conf parse failed ({}): {}'.format(f_name, e))
+            raise InitError('Conf parse failed ({})'.format(e))
 
         except SpawnError as e:
-            raise InitError('- Spawn module failed ({}): {}'.format(f_name, e))
+            raise InitError('Spawn module failed ({})'.format(e))
 
         except Exception as e:
-            raise InitError('- Init failed: {}'.format(e))
+            raise InitError('Init failed: {}'.format(e))
 
+        LOGGER.info('- Init OK')
         LOGGER.info('- Check target count: {}'.format(len(self.__nobjs)))
 
-    #@print_execution_func
-    def finalize(self):
-        """ @nojbs 에 저장된 각각의 오브젝트에서, file pointer 에 대한 finalize
-            처리를 수행합니다.
-        """
-        for nobj in self.__nobjs:
-            if nobj.get('fp'):
-                nobj['fp'].close()
-
-    #@print_execution_func
     def check(self):
         for nobj in self.__nobjs:
+            notion_conf = nobj['conf_dict']['notion']
+            slack_conf = nobj['conf_dict']['slack']
+
+            notion_trigger = notion_conf['trigger']
+            slack_send_type = slack_conf['send_type']
+
             mod = nobj.get('mod')
-
-            if nobj.get('schema'):
-                mod.set_schema_table(nobj['schema'])
-
             mod.set_block_item()
-            items = mod.get_block_item()
 
-            for item in items:
-                text_msg = mod.make_text_msg(item)
-                block_msg = mod.make_block_msg(item)
+            for item in mod.get_target_block_item(notion_trigger):
+                if slack_send_type == 'text':
+                    msg = mod.make_text_msg(item)
+                    mod.send_msg_to_slack(text=msg)
 
-                res = mod.send_msg_to_slack(text_msg, block_msg)
+                elif slack_send_type == 'block':
+                    msg = mod.make_block_msg(item)
+                    mod.send_msg_to_slack(blocks=msg)
 
 
 class Daemon(object):
@@ -142,13 +162,16 @@ class Daemon(object):
         self.manager = Manager()
 
     def __run_manager(self):
-        LOGGER.info('Start manager')
-
-        self.manager.init()
-
         while True:
-            self.manager.check()
-            time.sleep(1)
+            try:
+                self.manager.check()
+
+            except Exception as e:
+                LOGGER.info(
+                    'Manager check failed ({})'.format(e)
+                )
+
+            time.sleep(5)
 
     def run(self):
         # running check
@@ -175,19 +198,18 @@ class Daemon(object):
                 os.dup2(so.fileno(), sys.stdout.fileno())
                 os.dup2(se.fileno(), sys.stderr.fileno())
 
+                self.manager.init()
+
                 __daemon_pid = str(os.getpid())
                 with open(DAEMON_PID_PATH, 'w') as f:
                     f.write(__daemon_pid)
 
                 LOGGER.info('Start daemon (pid:{})'.format(__daemon_pid))
-                self.__run_manager()
-
 
         except Exception as e:
             raise Exception('Start daemon failed ({})'.format(e))
 
-        finally:
-            self.manager.finalize()
+        self.__run_manager()
 
     def stop(self):
         # running check

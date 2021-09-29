@@ -17,6 +17,8 @@ class NotionBot(object):
     def __init__(self, webhook_url):
         self.webhook = InCommingWebHooks(webhook_url)
 
+        self.schema_table = {}
+
     def send_msg_to_slack(self, text=None, blocks=None):
         """
             간단한 문장 (@text) 또는 블럭형태 (@blocks) 메시지 를
@@ -39,11 +41,17 @@ class NotionBot(object):
 
         return self.webhook.send_msg(**data)
 
+    def set_schema_table(self, schema_conf_dict):
+        """ 'slack/send_type' 설정이 ' block' 인 경우,
+            'slack/block_format' 설정 정보를 @self.schmea_table에 저장 합니다.
+        """
+        self.schema_table = schema_conf_dict
+
     def set_block_item(self):
         """ need overriding """
         pass
 
-    def get_block_item(self):
+    def get_target_block_item(self, trigger):
         """ need overriding """
         pass
 
@@ -72,16 +80,7 @@ class CollectionPageNotiBot(NotionBot):
         self.notion = NotionAPI(notion_token)
         self.notion_url = notion_url
 
-        self.schema_table = {}
-
         self.all_row_items = []
-
-    def set_schema_table(self, schema_conf_dict):
-        """ conf.json 파일에서, 'schema' 부분을 파싱하여,
-            아래 클래스 attribute에 저장합니다.
-        """
-        self.schema_table = schema_conf_dict
-        # TODO. validate check
 
     def set_block_item(self):
         """ Notion URL (@self.notion_url) 에 해당하는 페이지의
@@ -100,36 +99,28 @@ class CollectionPageNotiBot(NotionBot):
                 'Set collection block failed ({})'.format(e)
             )
 
-    def get_block_item(self):
+    def get_target_block_item(self, trigger):
         """ Coll 블럭에 대한 각각의 Row 항목이 저장된 리스트 (@items) 에서
             Trigger가 되는 체크박스가 True (체크됨) 인 항목을 iteration 하여
             리스트에 저장 및 반환 합니다.
+
+            TODO. 개선 필요 (꼭 필요한가?..)
         """
         def iter_target_item(items):
             for item in items:
-                is_need_notice = self.notion.get_collection_item_property(
-                    item, self.schema_table['trigger']
+                is_need_notice = (
+                    self.notion.get_collection_item_property(item, trigger)
                 )
 
                 if is_need_notice is True:
                     yield item
-
-        if not self.schema_table:
-            raise GetNotionBlockError(
-                'The schema table is not defined\n'
-                '(Can be defined as a "set_back_table" function)'
-            )
 
         target_items = []
         for item in iter_target_item(self.all_row_items):
             target_items.append(item)
 
             # Trigger 체크박스 해제
-            self.notion.set_collection_item_property(
-                item,
-                self.schema_table['trigger'],
-                False
-            )
+            self.notion.set_collection_item_property(item, trigger, False)
 
         return target_items
 
@@ -174,8 +165,8 @@ class CollectionPageNotiBot(NotionBot):
                 return str(obj)
 
 
-        schmea_fmt_f_name = self.schema_table['fmt_file_name']
-        schmea_fmt_var_dict = self.schema_table['fmt_variable']
+        schmea_fmt_f_name = self.schema_table['file']
+        schmea_fmt_var_dict = self.schema_table['variable_block']
 
         # table 정보에 conf json에 정의된 변수값 추가
         json_var_table = {}
