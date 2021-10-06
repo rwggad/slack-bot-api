@@ -6,6 +6,8 @@ INCOMING_URL = ""
 
 
 class TimerBot(object):
+    MAX_SEC = 99999999
+
     HOUR_TO_SEC = 3600
     MINUTE_TO_SEC = 60
 
@@ -29,7 +31,12 @@ class TimerBot(object):
 
                 name = usr_elem[0]
                 time = usr_elem[1]
-                usr_table[name] = datetime.strptime(time,"%H:%M:%S")
+
+                try:
+                    usr_table[name] = datetime.strptime(time,"%H:%M:%S")
+
+                except ValueError as e:
+                    usr_table[name] = usr_elem[1]
 
         return usr_table
 
@@ -50,40 +57,66 @@ class TimerBot(object):
         cur_time_to_sec = cal_total_second(cur_time)
 
         for user, user_time in self.__usr_table.items():
-            user_time_to_sec = cal_total_second(user_time)
-
-            sec_interval = (user_time_to_sec - cur_time_to_sec)
-
-            if cur_time_to_sec >= user_time_to_sec:
-                msg_list.append(self.FINISH_FMT.format(U=user))
-                continue
-
-            elif sec_interval <= self.HOUR_TO_SEC:
+            if user_time == 'undefined':
                 msg_list.append(
-                    self.M_FMT.format(
-                        U=user,
-                        M=str(int(sec_interval / self.MINUTE_TO_SEC))
+                    (
+                        self.MAX_SEC,
+                        '{}님의 퇴근 시간은 알 수 없습니다.'.format(user)
                     )
                 )
-                continue
+
+            elif user_time == 'newcomer':
+                msg_list.append(
+                    (
+                        self.MAX_SEC,
+                        '{}님 신입은 퇴근 할 수 없습니다.'.format(user)
+                    )
+                )
 
             else:
-                remain_hour = int(sec_interval / self.HOUR_TO_SEC)
-                remain_minute = int(
-                    (sec_interval % self.HOUR_TO_SEC) / self.MINUTE_TO_SEC
-                )
+                user_time_to_sec = cal_total_second(user_time)
+                sec_interval = (user_time_to_sec - cur_time_to_sec)
 
-                msg_list.append(
-                    self.H_M_FMT.format(
-                        U=user,
-                        H=remain_hour,
-                        M=remain_minute
+                if cur_time_to_sec >= user_time_to_sec:
+                    msg_list.append(
+                        (sec_interval, self.FINISH_FMT.format(U=user))
                     )
-                )
-                continue
+
+                elif sec_interval <= self.HOUR_TO_SEC:
+                    msg_list.append(
+                        (
+                            sec_interval,
+                            self.M_FMT.format(
+                                U=user,
+                                M=str(int(sec_interval / self.MINUTE_TO_SEC))
+                            )
+                        )
+                    )
+                    continue
+
+                else:
+                    remain_hour = int(sec_interval / self.HOUR_TO_SEC)
+                    remain_minute = int(
+                        (sec_interval % self.HOUR_TO_SEC) / self.MINUTE_TO_SEC
+                    )
+
+                    msg_list.append(
+                        (
+                            sec_interval,
+                            self.H_M_FMT.format(
+                                U=user,
+                                H=remain_hour,
+                                M=remain_minute
+                            )
+                        )
+                    )
+                    continue
 
         if msg_list:
-            return '\n'.join(msg_list)
+            sorted_msg_list = sorted(msg_list, key=lambda x: x[0])
+            return '\n'.join(
+                [x[1] for x in sorted_msg_list]
+            )
 
         return ''
 
